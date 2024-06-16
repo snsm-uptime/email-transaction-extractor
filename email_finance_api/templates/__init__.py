@@ -1,0 +1,1 @@
+from .promerica import PromericaMail
