@@ -1,1 +1,0 @@
-from .regex import extract_email
