@@ -5,3 +5,4 @@ from .file_management import (create_logs_folder, create_reports_folder,
 from .logging import configure_logger
 from .pagination import PaginationDetails, Paginator, ThreadedPaginator
 from .time import str_to_date, date_to_str
+from .regex import extract_email_from_string

@@ -11,10 +11,10 @@ class DateRange:
             if start_date is None or end_date is None:
                 raise ValueError(
                     "Either 'start_date' and 'end_date' or 'days_ago' must be provided.")
-            self.start_date = start_date.replace(
-                hour=0, minute=0, second=0, microsecond=0)
-            self.end_date = end_date.replace(
-                hour=23, minute=59, second=59, microsecond=999999)
+        self.start_date = start_date.replace(
+            hour=0, minute=0, second=0, microsecond=0)
+        self.end_date = end_date.replace(
+            hour=23, minute=59, second=59, microsecond=999999)
 
     def duration(self) -> int:
         return (self.end_date - self.start_date).days

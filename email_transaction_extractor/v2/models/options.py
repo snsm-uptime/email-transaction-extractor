@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from .date import DateRange
+from .dates import DateRange
 from .enums import OutputFormat, StorageType, ImapServer
 
 

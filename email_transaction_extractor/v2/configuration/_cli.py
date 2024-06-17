@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import ValidationError
 from ..models.options import CLIOptions
 from ..models.enums import OutputFormat, StorageType, ImapServer
-from ..models.date import DateRange
+from ..models.dates import DateRange
 from dotenv import load_dotenv
 
 
