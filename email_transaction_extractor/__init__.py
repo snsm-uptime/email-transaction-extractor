@@ -11,4 +11,4 @@ def main():
     cli_args = cli.parse_args()
     cli.print_config()
     report = TransactionReport(cli_args)
-    emails = report.get_content()
+    report()

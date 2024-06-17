@@ -15,9 +15,10 @@ class PromericaMail(Mail, TransactionMail):
         currency, value = self.get_value_and_currency()
         return Transaction(
             bank=Banks.PROMERICA,
-            body=self.get_body(),
-            business=self.get_business(),
-            business_type=self.get_business_type(),
+            body=re.sub(r'\s+', ' ', self.get_body()).strip(),
+            business=re.sub(r'\s+', ' ', self.get_business()).strip(),
+            business_type=re.sub(
+                r'\s+', ' ', self.get_business_type()).strip(),
             currency=currency,
             date=self.get_date(),
             expense_priority=self.get_expense_priority(),
@@ -45,7 +46,7 @@ class PromericaMail(Mail, TransactionMail):
         return business_match.group(1).strip() if business_match else None
 
     def get_body(self) -> str:
-        ...
+        return self.body
 
     def get_date(self) -> datetime:
         date_pattern = r"Fecha/hora\s+(\d{2} \w{3} \d{4} / \d{2}:\d{2})"
