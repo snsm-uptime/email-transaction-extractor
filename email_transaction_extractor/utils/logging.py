@@ -1,18 +1,17 @@
 import logging
-import os
 
 
-def configure_logger(name: str, log_level: int, log_file: str = None) -> logging.Logger:
+def configure_root_logger(log_level: int, log_file: str = None) -> None:
     """
-    Configures and returns a logger.
+    Configures the root logger, applying the configuration to all loggers.
 
-    :param name: Name of the logger.
     :param log_level: Logging level (e.g., 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL').
     :param log_file: Optional log file to write logs to.
-    :return: Configured logger.
     """
-    logger = logging.getLogger(name)
+    # Create root logger
+    logger = logging.getLogger()
     logger.setLevel(log_level)
+
     # Log format
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -29,7 +28,3 @@ def configure_logger(name: str, log_level: int, log_file: str = None) -> logging
         fh.setLevel(log_level)
         fh.setFormatter(formatter)
         logger.addHandler(fh)
-
-    return logger
-    logger = configure_logger(
-        'transaction_extractor', log_level='DEBUG', log_file=os.getenv('LOG_FILE', 'app.log'))

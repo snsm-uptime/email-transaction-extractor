@@ -2,7 +2,7 @@ import email
 import logging
 from typing import Generic, List, Type, TypeVar
 
-from ..authentication.email_client import EmailClient
+from ..email.client import EmailClient
 from ..email.processing import IMAPSearchCriteria
 from ..models.protocols import HasMessageConstructor
 
@@ -18,7 +18,7 @@ class EmailService(Generic[T]):
 
     def fetch_email_ids(self, mailbox: str, criteria: IMAPSearchCriteria) -> list[str] | None:
         self.client.select_mailbox(mailbox)
-        status, data = self.client.connection.search(None, criteria)
+        status, data = self.client.connection.search(None, criteria.build())
         if status == 'OK':
             return data[0].split()
         self.logger.error(f'Status not OK {status}')

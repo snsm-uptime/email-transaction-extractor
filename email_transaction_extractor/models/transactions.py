@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 from datetime import datetime
-from .enums import Banks, ExpensePriority, ExpenseType
+from .enums import Bank, ExpensePriority, ExpenseType
 
 
 @dataclass
 class Transaction:
-    bank: Banks
-    body: str
+    date: datetime
+    value: float
+    currency: str
     business: str
     business_type: str | None
-    currency: str
-    date: datetime
+    bank: Bank
     expense_priority: ExpensePriority | None
     expense_type: ExpenseType | None
-    value: float
+    body: str

@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import sys
 from datetime import datetime
@@ -6,17 +7,22 @@ from pydantic import ValidationError
 from ..models.options import CLIOptions
 from ..models.enums import OutputFormat, StorageType, ImapServer
 from ..models.dates import DateRange
+from ..utils.time import parse_end_date
 from dotenv import load_dotenv
 
 
 class CLIHandler:
     def __init__(self):
         load_dotenv()
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.parser = argparse.ArgumentParser(
             description="Transaction Extractor: Extract transaction details from bank statements or emails."
         )
         self._add_arguments()
-        self.args = self.parser.parse_args()
+        try:
+            self.args = self.parser.parse_args()
+        except ValueError as ve:
+            logging.exception(ve)
 
     def _add_arguments(self) -> CLIOptions:
         self.parser.add_argument(
@@ -88,20 +94,19 @@ class CLIHandler:
             help='List of email addresses to filter by'
         )
 
-        date_group = self.parser.add_mutually_exclusive_group()
-        date_group.add_argument(
+        self.parser.add_argument(
             '--days-ago',
             type=int,
             help='Date range for filtering emails in the past days (e.g., 7 for past 7 days)'
         )
-        date_group.add_argument(
+        self.parser.add_argument(
             '--start-date',
             type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
             help='Start date for the date range (format: YYYY-MM-DD)'
         )
-        date_group.add_argument(
+        self.parser.add_argument(
             '--end-date',
-            type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
+            type=parse_end_date,
             help='End date for the date range (format: YYYY-MM-DD)'
         )
 
@@ -123,12 +128,12 @@ class CLIHandler:
 
             cli_args = CLIOptions(**args, date_range=date_range)
         except ValidationError as e:
-            print(e.json())
+            self.logger(e.json())
             sys.exit(1)
         return cli_args
 
-    def print_config(self):
+    def log_config(self):
         args_dict = vars(self.args)
-        print("Configuration:")
+        self.logger.info("Configuration:")
         for key, value in args_dict.items():
-            print(f"{key}: {value}")
+            self.logger.info(f"{key}: {value}")

@@ -1,7 +1,7 @@
 from enum import Enum, auto
 
 
-class Banks(Enum):
+class Bank(Enum):
     PROMERICA = "info@promerica.fi.cr"
     BAC = "notificacion@notificacionesbaccr.com"
     SIMAN = ""
@@ -38,4 +38,5 @@ class OutputFormat(Enum):
 
 class StorageType(Enum):
     FILE = 'file'
-    DATABASE = 'database'
+    SQLITE = 'sqlite'
+    POSTGRES = 'postgres'

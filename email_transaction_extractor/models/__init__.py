@@ -1,4 +1,4 @@
-from .enums import OutputFormat, StorageType, ImapServer, Banks, ExpensePriority, ExpenseType
+from .enums import OutputFormat, StorageType, ImapServer, Bank, ExpensePriority, ExpenseType
 from .transactions import Transaction
 from .dates import DateRange
 from .options import CLIOptions

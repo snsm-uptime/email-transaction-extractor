@@ -4,7 +4,7 @@ from email.message import Message
 
 from bs4 import BeautifulSoup
 
-from ..utils.regex import extract_email_from_string
+from ..email.processing import extract_email_from_string
 
 
 class Mail(ABC):
@@ -14,7 +14,7 @@ class Mail(ABC):
         normalized_subject = ""
         for part, encoding in decoded_header:
             if isinstance(part, bytes):
-                if encoding is None:
+                if encoding is None or encoding == 'unknown-8bit':
                     encoding = "utf-8"
                 normalized_subject += part.decode(encoding, errors="replace")
             else:

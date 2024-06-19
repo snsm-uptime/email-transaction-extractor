@@ -28,8 +28,8 @@ class CLIOptions(BaseModel):
                              description="Limit the number of emails to process")
     filter_accounts: Optional[str] = Field(
         None, description="List of email addresses to filter by")
-    date_range: DateRange = Field(
-        DateRange(days_ago=7), description="Date range for filtering emails")
+    date_range: DateRange = Field(...,
+                                  description="Date range for filtering emails")
 
     class Config:
         arbitrary_types_allowed = True

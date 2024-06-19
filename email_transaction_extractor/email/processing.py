@@ -1,37 +1,32 @@
+import re
 from datetime import datetime
-import imaplib
-from typing import Generic, List, Generator, Type, TypeVar
+from typing import Generator, List
 
-from ..models import Mail
-
-T = TypeVar('T', bound='Mail')
+from ..models import Mail, Transaction, TransactionMail
 
 
-class MailFilterBuilder(Generic[T]):
-    def __init__(self, email_list: List[T], type: Type[T]):
-        self.email_list: List[T] = email_list
-        self.type = type
+class MailFilterBuilder:
+    def __init__(self, email_list: List[Mail]):
+        self.__email_list: List[Mail] = email_list
 
     def filter_by_authors(self, authors: List[str]) -> 'MailFilterBuilder':
-        self.email_list = list(self.__filter_by_authors(authors))
+        self.__email_list = list(self.__filter_by_authors(authors))
         return self
 
     def filter_by_subject_like(self, subject_keyword: str) -> 'MailFilterBuilder':
-        self.email_list = list(self.__filter_by_subject_like(subject_keyword))
+        self.__email_list = list(
+            self.__filter_by_subject_like(subject_keyword))
         return self
 
-    def __filter_by_authors(self, authors: List[str]) -> Generator[T, None, None]:
-        return (email for email in self.email_list if email.author in authors)
+    def __filter_by_authors(self, authors: List[str]) -> Generator[Mail, None, None]:
+        return (email for email in self.__email_list if email.author in authors)
 
-    def __filter_by_subject_like(self, subject_keyword: str) -> Generator[T, None, None]:
+    def __filter_by_subject_like(self, subject_keyword: str) -> Generator[Mail, None, None]:
         keyword_lower = subject_keyword.lower()
-        return (email for email in self.email_list if keyword_lower in email.subject.lower())
+        return (email for email in self.__email_list if keyword_lower in email.subject.lower())
 
-    def filter(self) -> List[T]:
-        filtered_emails = []
-        for mail in self.email_list:
-            filtered_emails.append(self.type(mail.msg))
-        return filtered_emails
+    def filter(self) -> List[Mail]:
+        return self.__email_list
 
 
 class IMAPSearchCriteria:
@@ -51,7 +46,8 @@ class IMAPSearchCriteria:
         return self
 
     def subject(self, subject):
-        self.criteria.append(f'SUBJECT "{subject}"')
+        if subject:
+            self.criteria.append(f'SUBJECT "{subject}"')
         return self
 
     def body(self, text):
@@ -104,3 +100,27 @@ class IMAPSearchCriteria:
 
     def build(self):
         return ' '.join(self.criteria)
+
+
+def extract_email_from_string(text: str) -> str | None:
+    # Regular expression to extract email address
+    match = re.search(r'[\w\.-]+@[\w\.-]+', text)
+    if match:
+        return match.group(0)
+    return None
+
+
+def from_mail_to_transaction(mail: TransactionMail) -> Transaction:
+    currency, value = mail.get_value_and_currency()
+    transaction = Transaction(
+        bank=mail.bank,
+        body=mail.get_body(),
+        business=mail.get_business(),
+        business_type=mail.get_business_type(),
+        currency=currency,
+        date=mail.get_date(),
+        expense_priority=mail.get_expense_priority(),
+        expense_type=mail.get_expense_type(),
+        value=value
+    )
+    return transaction

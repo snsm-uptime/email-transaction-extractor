@@ -1,30 +1,17 @@
-from dataclasses import asdict
-from datetime import datetime
-from email.message import Message
-from functools import cached_property
 import re
-from ..models import Banks, ExpenseType, Mail, Transaction, TransactionMail, ExpensePriority
+from datetime import datetime
+from dateutil.parser import parse as parse_date
+from email.message import Message
+
+import pytz
+
+from ..models import Bank, ExpensePriority, ExpenseType, TransactionMail
+from ..utils.decorators import clean_whitespace
 
 
-class PromericaMail(Mail, TransactionMail):
+class PromericaMailParser(TransactionMail):
     def __init__(self, msg: Message):
-        super().__init__(msg)
-
-    @cached_property
-    def transaction(self) -> Transaction:
-        currency, value = self.get_value_and_currency()
-        return Transaction(
-            bank=Banks.PROMERICA,
-            body=re.sub(r'\s+', ' ', self.get_body()).strip(),
-            business=re.sub(r'\s+', ' ', self.get_business()).strip(),
-            business_type=re.sub(
-                r'\s+', ' ', self.get_business_type()).strip(),
-            currency=currency,
-            date=self.get_date(),
-            expense_priority=self.get_expense_priority(),
-            expense_type=self.get_expense_type(),
-            value=value
-        )
+        super().__init__(bank=Bank.PROMERICA, msg=msg)
 
     def get_value_and_currency(self) -> tuple[str, float]:
         value_currency_match = re.search(
@@ -36,15 +23,18 @@ class PromericaMail(Mail, TransactionMail):
         else:
             raise ValueError(f'No currency or value found in {self.subject}')
 
+    @clean_whitespace
     def get_business_type(self) -> str:
         business_type_match = re.search(
             r"Tipo de Comercio\s+([A-Z\s]+)", self.body)
         return business_type_match.group(1).strip() if business_type_match else None
 
+    @clean_whitespace
     def get_business(self) -> str:
         business_match = re.search(r"Comercio\s+([A-Z\s]+)", self.body)
         return business_match.group(1).strip() if business_match else None
 
+    @clean_whitespace
     def get_body(self) -> str:
         return self.body
 
@@ -52,7 +42,8 @@ class PromericaMail(Mail, TransactionMail):
         date_pattern = r"Fecha/hora\s+(\d{2} \w{3} \d{4} / \d{2}:\d{2})"
         date_match = re.search(date_pattern, self.body)
         date_str = date_match.group(1)
-        return datetime.strptime(date_str, "%d %b %Y / %H:%M")
+        dt = parse_date(date_str)
+        return dt.replace(tzinfo=pytz.UTC)
 
     def get_expense_priority(self) -> ExpensePriority | None:
         ...
