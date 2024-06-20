@@ -2,7 +2,8 @@ import re
 from datetime import datetime
 from typing import Generator, List
 
-from ..models import Mail, Transaction, TransactionMail
+from ..models.transactions import Transaction, TransactionMail
+from ..models.email import Mail
 
 
 class MailFilterBuilder:

@@ -1,8 +1,11 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from datetime import datetime
 from email.header import decode_header
 from email.message import Message
 
 from bs4 import BeautifulSoup
+
+from ..models.enums import Bank, ExpensePriority, ExpenseType
 
 from ..email.processing import extract_email_from_string
 
@@ -62,3 +65,24 @@ class Mail(ABC):
 
     def __str__(self):
         return f"Subject: {self.subject}\nRecipient: {self.authors}\nDate: {self.date}\nBody: {self.body}\n"
+
+
+class TransactionMail(Mail):
+    def __init__(self, bank: Bank, msg: Message):
+        self.bank = bank
+        super().__init__(msg)
+
+    @abstractmethod
+    def get_body(self) -> str: ...
+    @abstractmethod
+    def get_business(self) -> str: ...
+    @abstractmethod
+    def get_business_type(self) -> str | None: ...
+    @abstractmethod
+    def get_value_and_currency(self) -> tuple[str, float]: ...
+    @abstractmethod
+    def get_date(self) -> datetime: ...
+    @abstractmethod
+    def get_expense_type(self) -> ExpenseType | None: ...
+    @abstractmethod
+    def get_expense_priority(self) -> ExpensePriority | None: ...
