@@ -4,8 +4,7 @@ from typing import List
 from ..email.client import EmailClient
 from ..email import (BACMailParser, IMAPSearchCriteria, PromericaMailParser,
                      from_mail_to_transaction)
-from ..models import Bank, CLIOptions, Mail, Report, Transaction
-from ..models.protocols import TransactionMail
+from ..models import Bank, CLIOptions, Mail, Report, Transaction, TransactionMail
 from .email_service import EmailService
 
 

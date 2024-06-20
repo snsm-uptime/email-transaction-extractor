@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from ..models.enums import Bank, ExpensePriority, ExpenseType
 
-from ..email.processing import extract_email_from_string
+from ..utils.text import extract_email_from_string
 
 
 class Mail(ABC):

@@ -1,5 +1,5 @@
-from repositories.base_repository import BaseRepository
-from models.transaction import Transaction
+from ._base_repository import BaseRepository
+from ..models.transaction import Transaction
 
 
 class SQLiteRepository(BaseRepository):

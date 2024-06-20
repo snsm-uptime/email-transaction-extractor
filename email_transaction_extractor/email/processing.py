@@ -2,8 +2,8 @@ import re
 from datetime import datetime
 from typing import Generator, List
 
-from ..models.transactions import Transaction, TransactionMail
-from ..models.email import Mail
+from ..models.transactions import Transaction
+from ..models.email import Mail, TransactionMail
 
 
 class MailFilterBuilder:
@@ -101,14 +101,6 @@ class IMAPSearchCriteria:
 
     def build(self):
         return ' '.join(self.criteria)
-
-
-def extract_email_from_string(text: str) -> str | None:
-    # Regular expression to extract email address
-    match = re.search(r'[\w\.-]+@[\w\.-]+', text)
-    if match:
-        return match.group(0)
-    return None
 
 
 def from_mail_to_transaction(mail: TransactionMail) -> Transaction:

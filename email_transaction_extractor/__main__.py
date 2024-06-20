@@ -1,11 +1,27 @@
-from .repositories import SQLiteRepository, PostgresRepository
+from datetime import UTC, datetime
+
+from email_transaction_extractor.database.models.transaction import Transaction
+from email_transaction_extractor.models.enums import Bank, ExpensePriority, ExpenseType
+from .database.repositories import SQLiteRepository, PostgresRepository
 
 
 def main():
     # Example SQLite usage
     sqlite_repo = SQLiteRepository('sqlite.db')
-    item = Item(id=1, name='Test Item', description='This is a test item')
-    sqlite_repo.add(item)
+    sqlite_repo.create_tables()
+    item = Transaction(
+        date=datetime.now(UTC),
+        value=10000,
+        currency='CRC',
+        business='McDonalds',
+        business_type='Fast Food',
+        bank=Bank.BAC,
+        expense_priority=ExpensePriority.WANT,
+        expense_type=ExpenseType.EATING_OUT,
+        body='sample body of the email',
+    )
+
+    sqlite_repo.add_transaction(item)
     print(sqlite_repo.get(1))
 
     # Example PostgreSQL usage
