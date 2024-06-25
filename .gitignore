@@ -1,5 +1,6 @@
 # Custom Ignroes
 .vscode/
+*.db
 *.csv
 
 # Byte-compiled / optimized / DLL files
