@@ -1,4 +1,4 @@
-from email_transaction_extractor.database.models.transaction import Transaction
+from ..tables.transaction import TransactionTable
 from ._base_repository import BaseRepository
 
 
@@ -9,18 +9,18 @@ class PostgresRepository(BaseRepository):
         super().__init__(db_url)
         self.create_tables()
 
-    def add_transaction(self, transaction: Transaction) -> None:
+    def add_transaction(self, transaction: TransactionTable) -> None:
         with self.session_scope() as session:
             session.add(transaction)
 
-    def get_transaction(self, transaction_id: int) -> Transaction:
+    def get_transaction(self, transaction_id: int) -> TransactionTable:
         with self.session_scope() as session:
-            return session.query(Transaction).filter(Transaction.id == transaction_id).one_or_none()
+            return session.query(TransactionTable).filter(TransactionTable.id == transaction_id).one_or_none()
 
-    def update_transaction(self, transaction: Transaction) -> None:
+    def update_transaction(self, transaction: TransactionTable) -> None:
         with self.session_scope() as session:
-            existing_transaction = session.query(Transaction).filter(
-                Transaction.id == transaction.id).one_or_none()
+            existing_transaction = session.query(TransactionTable).filter(
+                TransactionTable.id == transaction.id).one_or_none()
             if existing_transaction:
                 existing_transaction.date = transaction.date
                 existing_transaction.value = transaction.value
@@ -34,7 +34,7 @@ class PostgresRepository(BaseRepository):
 
     def delete_transaction(self, transaction_id: int) -> None:
         with self.session_scope() as session:
-            transaction = session.query(Transaction).filter(
-                Transaction.id == transaction_id).one_or_none()
+            transaction = session.query(TransactionTable).filter(
+                TransactionTable.id == transaction_id).one_or_none()
             if transaction:
                 session.delete(transaction)

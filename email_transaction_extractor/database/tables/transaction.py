@@ -1,14 +1,11 @@
 from sqlalchemy import Column, DateTime, Float, Integer, String, Enum, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, UTC
 
 from email_transaction_extractor.models.enums import Bank, ExpensePriority, ExpenseType
+from .. import Base
 
-Base = declarative_base()
 
-
-class Transaction(Base):
+class TransactionTable(Base):
     __tablename__ = 'transactions'
 
     id = Column(Integer, primary_key=True)
