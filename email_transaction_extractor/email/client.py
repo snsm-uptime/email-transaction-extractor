@@ -72,4 +72,3 @@ class EmailClient:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.disconnect()
-        self.logger.info('Disconnected to the email client')
