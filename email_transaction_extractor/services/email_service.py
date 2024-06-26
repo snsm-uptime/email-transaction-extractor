@@ -7,12 +7,17 @@ from email_transaction_extractor.utils.dates import DateRange
 
 
 class EmailService:
-    def __init__(self, client: EmailClient, date_range: DateRange):
+    def __init__(self, client: EmailClient, default_criteria: Optional[IMAPSearchCriteria] = None):
         self.client = client
-        self._default_criteria = IMAPSearchCriteria().date_range(
-            date_range.start_date,
-            date_range.end_date
-        )
+        self.__default_criteria = default_criteria or IMAPSearchCriteria()
+
+    @property
+    def default_criteria(self) -> IMAPSearchCriteria:
+        return self.__default_criteria
+
+    @default_criteria.setter
+    def default_criteria(self, criteria: IMAPSearchCriteria) -> None:
+        self.__default_criteria = criteria
 
     def get_mail_from_bank(self, bank: Bank, subject_filter: Optional[str] = None) -> List[Message]:
         criteria = self._default_criteria.from_(bank.value)

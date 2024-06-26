@@ -10,22 +10,13 @@ from email_transaction_extractor.utils.dates import DateRange
 
 
 class EmailClient:
-    def __init__(self, email_user: str, email_pass: str, server: str, mailbox: str = "inbox", default_criteria: Optional[IMAPSearchCriteria] = None):
+    def __init__(self, email_user: str, email_pass: str, server: str, mailbox: str = "inbox"):
         self.server = server
         self.email_user = email_user
         self.email_pass = email_pass
         self.mailbox = mailbox
         self.connection: Optional[imaplib.IMAP4_SSL] = None
         self.logger = logging.getLogger(__name__)
-        self.__default_criteria = default_criteria or IMAPSearchCriteria()
-
-    @property
-    def default_criteria(self) -> IMAPSearchCriteria:
-        return self.__default_criteria
-
-    @default_criteria.setter
-    def default_criteria(self, criteria: IMAPSearchCriteria) -> None:
-        self.__default_criteria = criteria
 
     def connect(self):
         try:
@@ -40,8 +31,7 @@ class EmailClient:
 
     def fetch_email_ids(self, criteria: IMAPSearchCriteria) -> Optional[List[str]]:
         try:
-            status, data = self.connection.search(
-                None, self.default_criteria.and_(criteria.build()))
+            status, data = self.connection.search(None, criteria.build())
             if status == 'OK':
                 return data[0].split()
             self.logger.error(f'Status not OK: {status}')
