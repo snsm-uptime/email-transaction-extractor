@@ -1,3 +1,4 @@
+import copy
 from email.message import Message
 from typing import List, Optional
 
@@ -20,10 +21,11 @@ class EmailService:
         self.__default_criteria = criteria
 
     def get_mail_from_bank(self, bank: Bank, subject_filter: Optional[str] = None) -> List[Message]:
-        criteria = self._default_criteria.from_(bank.value)
+        criteria = copy.deepcopy(self.__default_criteria).from_(bank.value)
         if subject_filter:
             criteria = criteria.subject(subject_filter)
-        ids = self.client.fetch_email_ids(criteria)
+        final_criteria = IMAPSearchCriteria().and_(criteria.build())
+        ids = self.client.fetch_email_ids(final_criteria)
         if ids is None:
             return []
         emails = self.client.get_emails(ids)
