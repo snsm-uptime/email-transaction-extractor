@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from email_transaction_extractor.models.enums import Bank, ExpensePriority, ExpenseType
@@ -23,5 +23,6 @@ class TransactionCreate(TransactionBase):
 class Transaction(TransactionBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )

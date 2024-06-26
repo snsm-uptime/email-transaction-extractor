@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -25,6 +26,13 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+def get_url():
+    return os.getenv("DATABASE_URL", "sqlite:///./test.db")
+
+
+config.set_main_option("sqlalchemy.url", get_url())
 
 
 def run_migrations_offline() -> None:
