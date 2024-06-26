@@ -25,8 +25,7 @@ def process_emails(db: Session):
             config.EMAIL_MAILBOX
         )
         transaction_service = TransactionService(db)
-        transaction_service.process_emails(
-            email_client, "Transaction Report", "no-reply@bank.com")
+        all_email = transaction_service.process_emails(email_client)
         logger.info("Emails processed successfully.")
     except Exception as e:
         logger.error(f"Error processing emails: {e}")
@@ -56,12 +55,13 @@ async def lifespan(app: FastAPI):
         raise
 
     logger = logging.getLogger('lifespan')
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_emails, 'interval', minutes=5)
-    scheduler.start()
+    check_emails()
+    # scheduler = BackgroundScheduler()
+    # scheduler.add_job(check_emails, 'interval', minutes=5)
+    # scheduler.start()
     logger.info("Scheduler started.")
     yield
-    scheduler.shutdown()
+    # scheduler.shutdown()
     logger.info("Scheduler shutdown.")
 
 app = FastAPI(lifespan=lifespan)
