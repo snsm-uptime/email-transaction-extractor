@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import logging
 from contextlib import asynccontextmanager
 import os
@@ -7,6 +8,7 @@ from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
 from email_transaction_extractor import config
+from email_transaction_extractor.utils.dates import DateRange
 
 from .database import Base, engine, get_db
 from .email import EmailClient
@@ -25,10 +27,12 @@ def process_emails(db: Session):
             config.EMAIL_MAILBOX
         )
         transaction_service = TransactionService(db)
-        all_email = transaction_service.process_emails(email_client)
+        today = datetime.now()
+        transactions = transaction_service.get_transactions_from_email_by_date(
+            email_client, DateRange(today - timedelta(weeks=4), today))
         logger.info("Emails processed successfully.")
     except Exception as e:
-        logger.error(f"Error processing emails: {e}")
+        logger.exception(f"Error processing emails: {e}")
 
 
 def check_emails():
