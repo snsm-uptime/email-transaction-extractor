@@ -20,6 +20,10 @@ class TransactionCreate(TransactionBase):
     pass
 
 
+class TransactionUpdate(TransactionBase):
+    pass
+
+
 class Transaction(TransactionBase):
     id: int
 
