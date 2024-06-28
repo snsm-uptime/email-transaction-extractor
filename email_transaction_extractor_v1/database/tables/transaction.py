@@ -8,7 +8,7 @@ from .. import Base
 class TransactionTable(Base):
     __tablename__ = 'transactions'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     date = Column(DateTime, default=datetime.now(UTC))
     value = Column(Float, nullable=False)
     currency = Column(String, nullable=False)

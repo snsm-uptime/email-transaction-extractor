@@ -1,6 +1,6 @@
-from sqlite3 import IntegrityError
 from typing import List
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from email_transaction_extractor.email.client import EmailClient
@@ -36,10 +36,30 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
         db_obj = self.repository.model(**obj_in_data)
         try:
             db_obj = self.repository.create(db_obj)
+            self.logger.info('Created obj with id' + db_obj.id)
             # TODO: Add bank and bank_email to the transaction model to avoid type missmatch error
         except IntegrityError:
             raise TransactionIDExistsError(transaction_id)
         return self.return_schema.model_validate(db_obj)
+
+    def get_all(self) -> List[Transaction]:
+        db_objs = self.repository.get_all()
+        # Create a list of transactions without the 'body' field
+        transactions_without_body = [
+            Transaction(
+                id=obj.id,
+                date=obj.date,
+                value=obj.value,
+                currency=obj.currency,
+                business=obj.business,
+                business_type=obj.business_type,
+                bank=obj.bank,
+                expense_priority=obj.expense_priority,
+                expense_type=obj.expense_type
+            )
+            for obj in db_objs
+        ]
+        return transactions_without_body
 
     def get_transactions_from_email_by_date(self, client: EmailClient, date_range: DateRange) -> List[TransactionCreate]:
         with client:

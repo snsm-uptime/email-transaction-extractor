@@ -21,7 +21,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         db_obj = self.repository.create(db_obj)
         return self.return_schema.model_validate(db_obj)
 
-    def get(self, id: int) -> ReturnSchemaType:
+    def get(self, id: str) -> ReturnSchemaType:
         db_obj = self.repository.get(id)
         return self.return_schema.model_validate(db_obj) if db_obj else None
 

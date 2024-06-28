@@ -10,13 +10,13 @@ router = APIRouter()
 @router.post("/transactions/", response_model=Transaction)
 def create_transaction(transaction: TransactionCreate, db: Session = Depends(get_db)):
     service = TransactionService(db)
-    return service.create_transaction(transaction)
+    return service.create(transaction)
 
 
 @router.get("/transactions/{transaction_id}", response_model=Transaction)
-def read_transaction(transaction_id: int, db: Session = Depends(get_db)):
+def read_transaction(transaction_id: str, db: Session = Depends(get_db)):
     service = TransactionService(db)
-    transaction = service.get_transaction(transaction_id)
+    transaction = service.get(transaction_id)
     if transaction is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return transaction
@@ -25,7 +25,7 @@ def read_transaction(transaction_id: int, db: Session = Depends(get_db)):
 @router.get("/transactions/", response_model=list[Transaction])
 def read_all_transactions(db: Session = Depends(get_db)):
     service = TransactionService(db)
-    return service.get_all_transactions()
+    return service.get_all()
 
 
 @router.put("/transactions/{transaction_id}", response_model=Transaction)

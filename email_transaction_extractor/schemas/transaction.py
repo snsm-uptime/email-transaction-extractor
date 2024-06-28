@@ -26,7 +26,7 @@ class TransactionUpdate(TransactionBase):
 
 
 class Transaction(TransactionBase):
-    id: int
+    id: str
 
     model_config = ConfigDict(
         from_attributes=True

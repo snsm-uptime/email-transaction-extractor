@@ -1,5 +1,5 @@
 # email_transaction_extractor/repositories/generic_repository.py
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from typing import Type, Generic, List, Optional
 from sqlalchemy.orm import Session
 from email_transaction_extractor.typing import ModelType
@@ -20,7 +20,7 @@ class GenericRepository(Generic[ModelType]):
             self.db.rollback()
             raise e
 
-    def get(self, id: int) -> Optional[ModelType]:
+    def get(self, id: str) -> Optional[ModelType]:
         return self.db.query(self.model).filter(self.model.id == id).first()
 
     def get_all(self) -> List[ModelType]:
