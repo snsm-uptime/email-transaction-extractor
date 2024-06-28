@@ -1,4 +1,5 @@
 # email_transaction_extractor/services/generic_service.py
+from logging import getLogger
 from typing import Type, Generic, List
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         self.create_schema = create_schema
         self.update_schema = update_schema
         self.return_schema = return_schema
+        self.logger = getLogger(self.__class__.__name__)
 
     def create(self, obj_in: CreateSchemaType) -> ReturnSchemaType:
         obj_in_data = obj_in.model_dump()

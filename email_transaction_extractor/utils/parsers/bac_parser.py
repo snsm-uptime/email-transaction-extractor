@@ -1,7 +1,7 @@
 from email.message import Message
 import re
 from typing import Tuple
-from email_transaction_extractor.utils import BaseMessageParser
+from email_transaction_extractor.utils.parsers import BaseMessageParser
 
 
 class BacMessageParser(BaseMessageParser):

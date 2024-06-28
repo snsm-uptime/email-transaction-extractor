@@ -1,24 +1,45 @@
+from sqlite3 import IntegrityError
 from typing import List
+
 from sqlalchemy.orm import Session
 
 from email_transaction_extractor.email.client import EmailClient
-from email_transaction_extractor.email.imap_search_criteria import IMAPSearchCriteria
+from email_transaction_extractor.email.imap_search_criteria import \
+    IMAPSearchCriteria
+from email_transaction_extractor.exceptions import TransactionIDExistsError
 from email_transaction_extractor.models.enums import Bank
-from email_transaction_extractor.models.transaction import TransactionTable
+from email_transaction_extractor.models.transaction import (
+    TransactionTable, generate_transaction_id)
 from email_transaction_extractor.schemas.transaction import (Transaction,
                                                              TransactionCreate,
                                                              TransactionUpdate)
 from email_transaction_extractor.services.email_service import EmailService
 from email_transaction_extractor.services.generic_service import GenericService
 from email_transaction_extractor.utils.dates import DateRange
-from email_transaction_extractor.utils.parsers.bac_parser import BacMessageParser
-from email_transaction_extractor.utils.parsers.promerica_parser import PromericaMessageParser
+from email_transaction_extractor.utils.parsers.bac_parser import \
+    BacMessageParser
+from email_transaction_extractor.utils.parsers.promerica_parser import \
+    PromericaMessageParser
 
 
 class TransactionService(GenericService[TransactionTable, TransactionCreate, TransactionUpdate, Transaction]):
     def __init__(self, db: Session):
         super().__init__(db, TransactionTable,
                          TransactionCreate, TransactionUpdate, Transaction)
+
+    def create(self, obj_in: TransactionCreate) -> Transaction:
+        transaction_id = generate_transaction_id(
+            obj_in.bank, obj_in.value, obj_in.date)
+        obj_in_data = obj_in.model_dump()
+        obj_in_data['id'] = transaction_id
+        obj_in_data['bank'] = obj_in.bank.name
+        db_obj = self.repository.model(**obj_in_data)
+        try:
+            db_obj = self.repository.create(db_obj)
+            # TODO: Add bank and bank_email to the transaction model to avoid type missmatch error
+        except IntegrityError:
+            raise TransactionIDExistsError(transaction_id)
+        return self.return_schema.model_validate(db_obj)
 
     def get_transactions_from_email_by_date(self, client: EmailClient, date_range: DateRange) -> List[TransactionCreate]:
         with client:
@@ -30,8 +51,10 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
                 )
             )
             bac_emails = service.get_mail_from_bank(Bank.BAC)
+            self.logger.info(f'Fetched the BAC transaction emails')
             promerica_emails = service.get_mail_from_bank(
-                Bank.PROMERICA, 'Comprobante')
+                Bank.PROMERICA, 'Comprobante de')
+            self.logger.info(f'Fetched the PROMERICA transaction emails')
             transactions: list[TransactionCreate] = []
 
             for email in bac_emails:
@@ -65,4 +88,6 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
                     expense_type=None
                 )
                 transactions.append(transaction)
+            self.logger.info(f'Extracted transaction details from emails')
+            self.logger.info(f'Total transactions = {len(transactions)}')
             return transactions

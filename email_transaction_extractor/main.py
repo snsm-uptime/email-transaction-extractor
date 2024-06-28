@@ -29,7 +29,14 @@ def process_emails(db: Session):
         transaction_service = TransactionService(db)
         today = datetime.now()
         transactions = transaction_service.get_transactions_from_email_by_date(
-            email_client, DateRange(today - timedelta(weeks=4), today))
+            email_client,
+            DateRange(
+                today - timedelta(minutes=config.REFRESH_INTERVAL_IN_MINUTES),
+                today
+            )
+        )
+        for obj in transactions:
+            transaction_service.create(obj)
         logger.info("Emails processed successfully.")
     except Exception as e:
         logger.exception(f"Error processing emails: {e}")
@@ -61,7 +68,7 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger('lifespan')
     check_emails()
     # scheduler = BackgroundScheduler()
-    # scheduler.add_job(check_emails, 'interval', minutes=5)
+    # scheduler.add_job(check_emails, 'interval', minutes=config.REFRESH_INTERVAL_IN_MINUTES)
     # scheduler.start()
     logger.info("Scheduler started.")
     yield
@@ -70,3 +77,5 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(transactions.router)
+
+# TODO: Include "Pago de tarjeta" emails from Promerica

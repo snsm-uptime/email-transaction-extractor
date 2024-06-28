@@ -1,14 +1,24 @@
-from sqlalchemy import Column, DateTime, Float, Integer, String, Enum, Text
+import hashlib
 from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Text
 
 from ..database import Base
 from ..models.enums import Bank, ExpensePriority, ExpenseType
 
 
+def generate_transaction_id(bank: str, value: float, date: datetime) -> str:
+    # Create a string from the bank, value, and date
+    input_string = f"{bank}{value}{date.isoformat()}"
+    # Generate a SHA-256 hash of the input string
+    transaction_id = hashlib.sha256(input_string.encode()).hexdigest()
+    return transaction_id
+
+
 class TransactionTable(Base):
     __tablename__ = 'transactions'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     value = Column(Float, nullable=False)
     currency = Column(String, nullable=False)

@@ -6,12 +6,12 @@ from email_transaction_extractor.models.enums import Bank, ExpensePriority, Expe
 
 class TransactionBase(BaseModel):
     bank: Bank
+    business: str
     currency: str
     date: datetime
     value: float
 
     body: Optional[str] = None
-    business: Optional[str] = None
     business_type: Optional[str] = None
     expense_priority: Optional[ExpensePriority] = None
     expense_type: Optional[ExpenseType] = None

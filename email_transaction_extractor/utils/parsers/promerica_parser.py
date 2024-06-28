@@ -2,8 +2,8 @@ import re
 from email.message import Message
 from typing import Tuple
 
-from email_transaction_extractor.utils import (BaseMessageParser,
-                                               strip_excess_whitespace)
+from email_transaction_extractor.utils.parsers import BaseMessageParser
+from email_transaction_extractor.utils.text import strip_excess_whitespace
 
 
 class PromericaMessageParser(BaseMessageParser):
@@ -13,14 +13,18 @@ class PromericaMessageParser(BaseMessageParser):
 
     def parse_business(self) -> str | None:
         business_match = re.search(r"Comercio\s+([A-Z\s]+)", self.body)
-        business = business_match.group(1).strip()
-        return ', '.join(strip_excess_whitespace(business)) if business_match else None
+        if business_match:
+            business = business_match.group(1).strip()
+            return ', '.join(strip_excess_whitespace(business))
+        return None
 
     def parse_business_type(self) -> str | None:
         business_type_match = re.search(
             r"Tipo de Comercio\s+([A-Z\s]+)", self.body)
-        business_type = business_type_match.group(1).strip()
-        return ', '.join(strip_excess_whitespace(business_type)) if business_type_match else None
+        if business_type_match:
+            business_type = business_type_match.group(1).strip()
+            return ', '.join(strip_excess_whitespace(business_type))
+        return None
 
     def parse_value_and_currency(self) -> Tuple[float, str]:
         value_currency_match = re.search(
