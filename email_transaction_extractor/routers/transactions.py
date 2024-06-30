@@ -1,11 +1,12 @@
 from datetime import date, datetime
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from email_transaction_extractor import config
 from email_transaction_extractor.database import get_db
 from email_transaction_extractor.email.client import EmailClient
-from email_transaction_extractor.schemas.request import RefreshTransactionsRequest
+from email_transaction_extractor.schemas.api_response import ApiResponse, PaginatedResponse, RefreshTransactionsRequest
 from email_transaction_extractor.schemas.transaction import Transaction, TransactionCreate
 from email_transaction_extractor.services.transaction_service import TransactionService
 from email_transaction_extractor.utils.dates import DateRange
@@ -71,10 +72,11 @@ def read_transaction(transaction_id: str, db: Session = Depends(get_db)):
     return transaction
 
 
-@router.get("/transactions/", response_model=list[Transaction])
-def read_all_transactions(db: Session = Depends(get_db)):
+@router.get("/transactions/", response_model=ApiResponse[PaginatedResponse[Transaction]])
+def read_all_transactions(cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
     service = TransactionService(db)
-    return service.get_all()
+    transactions_page = service.get_all(cursor=cursor, page_size=page_size)
+    return transactions_page.model_dump()
 
 
 @router.put("/transactions/{transaction_id}", response_model=Transaction)

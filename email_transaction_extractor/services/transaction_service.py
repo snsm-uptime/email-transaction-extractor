@@ -42,26 +42,26 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
             raise TransactionIDExistsError(transaction_id)
         return self.return_schema.model_validate(db_obj)
 
-    def get_all(self) -> List[Transaction]:
-        db_objs = self.repository.get_all()
-        # Create a list of transactions without the 'body' field
-        transactions_without_body = [
-            Transaction(
-                id=obj.id,
-                date=obj.date,
-                value=obj.value,
-                currency=obj.currency,
-                business=obj.business,
-                business_type=obj.business_type,
-                bank=obj.bank,
-                expense_priority=obj.expense_priority,
-                expense_type=obj.expense_type
-            )
-            for obj in db_objs
-        ]
-        self.logger.info(
-            f'TOTAL TRANSACTIONS: {len(transactions_without_body)}')
-        return transactions_without_body
+    # def get_all(self) -> List[Transaction]:
+    #     db_objs = self.repository.get_all()
+    #     # Create a list of transactions without the 'body' field
+    #     transactions_without_body = [
+    #         Transaction(
+    #             id=obj.id,
+    #             date=obj.date,
+    #             value=obj.value,
+    #             currency=obj.currency,
+    #             business=obj.business,
+    #             business_type=obj.business_type,
+    #             bank=obj.bank,
+    #             expense_priority=obj.expense_priority,
+    #             expense_type=obj.expense_type
+    #         )
+    #         for obj in db_objs
+    #     ]
+    #     self.logger.info(
+    #         f'TOTAL TRANSACTIONS: {len(transactions_without_body)}')
+    #     return transactions_without_body
 
     def refresh_database_with_emails_from_date(self, client: EmailClient, date_range: DateRange):
         transactions = self.get_transactions_from_email_by_date(

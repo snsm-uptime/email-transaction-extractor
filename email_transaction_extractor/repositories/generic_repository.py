@@ -1,8 +1,10 @@
-# email_transaction_extractor/repositories/generic_repository.py
-from sqlalchemy.exc import IntegrityError
-from typing import Type, Generic, List, Optional
+import time
+from typing import Type, TypeVar, Generic, List, Optional, Tuple
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel
 from email_transaction_extractor.typing import ModelType
+from email_transaction_extractor.utils.decorators import timed_operation
 
 
 class GenericRepository(Generic[ModelType]):
@@ -10,34 +12,57 @@ class GenericRepository(Generic[ModelType]):
         self.db = db
         self.model = model
 
-    def create(self, obj_in: ModelType) -> ModelType:
+    @timed_operation
+    def create(self, obj_in: ModelType) -> Tuple[ModelType, float]:
+        self.db.add(obj_in)
         try:
-            self.db.add(obj_in)
             self.db.commit()
             self.db.refresh(obj_in)
-            return obj_in
+            return obj_in, time.time()
         except IntegrityError as e:
             self.db.rollback()
             raise e
 
-    def get(self, id: str) -> Optional[ModelType]:
+    @timed_operation
+    def get(self, id: str) -> Tuple[Optional[ModelType], float]:
         return self.db.query(self.model).filter(self.model.id == id).first()
 
-    def get_all(self) -> List[ModelType]:
+    @timed_operation
+    def get_all(self) -> Tuple[List[ModelType], float]:
         return self.db.query(self.model).all()
 
-    def update(self, id: int, obj_in: dict) -> Optional[ModelType]:
+    @timed_operation
+    def update(self, id: str, obj_in: dict) -> Tuple[Optional[ModelType], float]:
         db_obj = self.get(id)
         if db_obj:
             for key, value in obj_in.items():
                 setattr(db_obj, key, value)
-            self.db.commit()
-            self.db.refresh(db_obj)
-        return db_obj
+            try:
+                self.db.commit()
+                self.db.refresh(db_obj)
+                return db_obj, time.time()
+            except IntegrityError as e:
+                self.db.rollback()
+                raise e
+        return None, time.time()
 
-    def delete(self, id: int) -> Optional[ModelType]:
+    @timed_operation
+    def delete(self, id: str) -> Tuple[Optional[ModelType], float]:
         db_obj = self.get(id)
         if db_obj:
             self.db.delete(db_obj)
-            self.db.commit()
-        return db_obj
+            try:
+                self.db.commit()
+                return db_obj, time.time()
+            except IntegrityError as e:
+                self.db.rollback()
+                raise e
+        return None, time.time()
+
+    @timed_operation
+    def get_paginated(self, offset: int, limit: int) -> Tuple[List[ModelType], float]:
+        return self.db.query(self.model).offset(offset).limit(limit).all()
+
+    @timed_operation
+    def count(self) -> Tuple[int, float]:
+        return self.db.query(self.model).count()
