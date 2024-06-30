@@ -1,9 +1,7 @@
 import re
 
 
-def extract_email_from_string(text: str) -> str | None:
-    # Regular expression to extract email address
-    match = re.search(r'[\w\.-]+@[\w\.-]+', text)
-    if match:
-        return match.group(0)
-    return None
+def strip_excess_whitespace(text: str) -> list[str]:
+    cleaned_string = re.sub(r'\s+T$', '', text).strip()
+    parts = re.split(r'\s{2,}', cleaned_string)
+    return parts

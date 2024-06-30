@@ -14,7 +14,7 @@ def configure_root_logger(log_level: int, log_file: str = None) -> None:
 
     # Log format
     formatter = logging.Formatter(
-        '%(levelname)s:\t%(asctime)s\t[%(name)s] %(message)s')
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # Console handler
     ch = logging.StreamHandler()

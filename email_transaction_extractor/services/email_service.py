@@ -1,39 +1,32 @@
-import email
-import logging
-from typing import Generic, List, Type, TypeVar
+import copy
+from email.message import Message
+from typing import List, Optional
 
-from ..email.client import EmailClient
-from ..email.processing import IMAPSearchCriteria
-from ..models.protocols import HasMessageConstructor
-
-T = TypeVar('T', bound=HasMessageConstructor)
+from email_transaction_extractor.email import EmailClient, IMAPSearchCriteria
+from email_transaction_extractor.models.enums import Bank
+from email_transaction_extractor.utils.dates import DateRange
 
 
-class EmailService(Generic[T]):
-    def __init__(self, client: EmailClient, type: Type[T]):
-        client.authenticate()
+class EmailService:
+    def __init__(self, client: EmailClient, default_criteria: Optional[IMAPSearchCriteria] = None):
         self.client = client
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.type = type
+        self.__default_criteria = default_criteria or IMAPSearchCriteria()
 
-    def fetch_email_ids(self, mailbox: str, criteria: IMAPSearchCriteria) -> list[str] | None:
-        self.client.select_mailbox(mailbox)
-        status, data = self.client.connection.search(None, criteria.build())
-        if status == 'OK':
-            return data[0].split()
-        self.logger.error(f'Status not OK {status}')
+    @property
+    def default_criteria(self) -> IMAPSearchCriteria:
+        return self.__default_criteria
 
-    def fetch_email_details(self, email_ids) -> List[T]:
-        emails = []
-        for email_id in email_ids:
-            # Fetch the email by ID
-            status, data = self.client.connection.fetch(email_id, '(RFC822)')
-            if status != 'OK':
-                self.logger.error(f"Failed to fetch email with ID {email_id}")
-                continue
-            msg = email.message_from_bytes(data[0][1])
-            emails.append(self.type(msg))
+    @default_criteria.setter
+    def default_criteria(self, criteria: IMAPSearchCriteria) -> None:
+        self.__default_criteria = criteria
+
+    def get_mail_from_bank(self, bank: Bank, subject_filter: Optional[str] = None) -> List[Message]:
+        criteria = copy.deepcopy(self.__default_criteria).from_(bank.value)
+        if subject_filter:
+            criteria = criteria.subject(subject_filter)
+        final_criteria = IMAPSearchCriteria().and_(criteria.build())
+        ids = self.client.fetch_email_ids(final_criteria)
+        if ids is None:
+            return []
+        emails = self.client.get_emails(ids)
         return emails
-
-    def logout(self):
-        self.client.connection.logout()

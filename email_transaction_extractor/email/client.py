@@ -1,34 +1,74 @@
+import email
 import imaplib
 import logging
-from ..models import ImapServer
+from email.message import Message
+from typing import List, Optional
+
+from email_transaction_extractor.email.imap_search_criteria import \
+    IMAPSearchCriteria
+from email_transaction_extractor.utils.dates import DateRange
 
 
 class EmailClient:
-    def __init__(self, username: str, password: str, imap_server: ImapServer, custom_server: str = None):
-        self.username = username
-        self.password = password
-        self.imap_server = custom_server if imap_server == ImapServer.CUSTOM else imap_server
-        self.connection: imaplib.IMAP4_SSL = None
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, email_user: str, email_pass: str, server: str, mailbox: str = "inbox"):
+        self.server = server
+        self.email_user = email_user
+        self.email_pass = email_pass
+        self.mailbox = mailbox
+        self.connection: Optional[imaplib.IMAP4_SSL] = None
+        self.logger = logging.getLogger(__name__)
 
-    def authenticate(self):
+    def connect(self):
         try:
-            self.connection = imaplib.IMAP4_SSL(self.imap_server.value)
-            self.connection.login(self.username, self.password)
-            self.logger.info(
-                "Successfully authenticated and connected to the server.")
-        except imaplib.IMAP4.error as e:
-            self.logger.error(f"Failed to authenticate: {e}")
+            self.connection = imaplib.IMAP4_SSL(self.server)
+            self.connection.login(self.email_user, self.email_pass)
+            self.connection.select(self.mailbox)
+            self.logger.info('Connected to the email server')
+        except Exception as e:
+            self.logger.exception(
+                f'Failed to connect to the email server: {e}')
             raise
 
-    def select_mailbox(self, mailbox: str):
-        if not self.connection:
-            raise ConnectionError(
-                "Not authenticated. Call authenticate() first.")
-        self.connection.select(mailbox)
-        self.logger.info(f"Mailbox '{mailbox}' selected.")
+    def fetch_email_ids(self, criteria: IMAPSearchCriteria) -> Optional[List[str]]:
+        try:
+            status, data = self.connection.search(None, criteria.build())
+            if status == 'OK':
+                return data[0].split()
+            self.logger.error(f'Status not OK: {status}')
+        except Exception as e:
+            self.logger.exception(f'Error fetching email IDs: {e}')
+        return None
 
-    def logout(self):
+    def get_emails(self, email_ids: List[str]) -> List[Message]:
+        emails: List[Message] = []
+        for email_id in email_ids:
+            try:
+                status, msg_data = self.connection.fetch(email_id, "(RFC822)")
+                if status != 'OK':
+                    self.logger.error(
+                        f'Failed to get email with ID {email_id}')
+                    continue
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        emails.append(msg)
+            except Exception as e:
+                self.logger.exception(
+                    f'Error fetching email with ID {email_id}: {e}')
+        return emails
+
+    def disconnect(self):
         if self.connection:
-            self.connection.logout()
-            self.logger.info("Logged out from the server.")
+            try:
+                self.connection.logout()
+                self.logger.info('Disconnected from the email server')
+            except Exception as e:
+                self.logger.error(
+                    f'Failed to disconnect from the email server: {e}')
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.disconnect()
