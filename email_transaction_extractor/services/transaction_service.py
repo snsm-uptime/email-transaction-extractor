@@ -59,26 +59,65 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
             )
             for obj in db_objs
         ]
+        self.logger.info(
+            f'TOTAL TRANSACTIONS: {len(transactions_without_body)}')
         return transactions_without_body
 
+    def refresh_database_with_emails_from_date(self, client: EmailClient, date_range: DateRange):
+        transactions = self.get_transactions_from_email_by_date(
+            client, date_range)
+        new_count = 0
+        for obj in transactions:
+            try:
+                self.logger.info(
+                    f'Processing transaction\tday={obj.date.isoformat()}\tbusiness={obj.business}')
+                new_count += 1
+                self.create(obj)
+            except TransactionIDExistsError as e:
+                self.logger.info(
+                    f'Transaction ID {e.transaction_id} already exists for {obj.business}, skipping.')
+                self.logger.exception(e)
+                continue
+            except IntegrityError as e:
+                self.logger.error(
+                    f'Integrity error while processing {obj.business}')
+                self.logger.exception(e)
+                continue
+            except Exception as e:
+                self.logger.error(
+                    f'Unexpected error while processing {obj.business}')
+                self.logger.exception(e)
+                continue
+        self.logger.info(
+            f"{len(transactions)} Emails processed successfully. Created {new_count} new entries in the DB")
+
     def get_transactions_from_email_by_date(self, client: EmailClient, date_range: DateRange) -> List[TransactionCreate]:
-        with client:
-            service = EmailService(
-                client,
-                default_criteria=IMAPSearchCriteria().date_range(
-                    date_range.start_date,
-                    date_range.end_date
-                )
-            )
-            bac_emails = service.get_mail_from_bank(Bank.BAC)
-            self.logger.info(f'Fetched the BAC transaction emails')
-            promerica_emails = service.get_mail_from_bank(
-                Bank.PROMERICA, 'Comprobante de')
-            self.logger.info(f'Fetched the PROMERICA transaction emails')
-            transactions: list[TransactionCreate] = []
+        """
+        Fetches transaction emails from specified banks within a given date range, parses the emails to extract transaction details,
+        and returns a list of TransactionCreate objects.
 
-            for email in bac_emails:
-                parser = BacMessageParser(email)
+        Args:
+            client (EmailClient): An instance of EmailClient used to connect to the email server and fetch emails.
+            date_range (DateRange): An instance of DateRange specifying the start and end dates for fetching emails.
+
+        Returns:
+            List[TransactionCreate]: A list of TransactionCreate objects containing the extracted transaction details from the emails.
+        """
+        service = EmailService(
+            client,
+            default_criteria=IMAPSearchCriteria().date_range(
+                date_range.start_date, date_range.end_date)
+        )
+        bac_emails = service.get_mail_from_bank(Bank.BAC)
+        self.logger.info('Fetched the BAC transaction emails')
+        promerica_emails = service.get_mail_from_bank(
+            Bank.PROMERICA, 'Comprobante de')
+        self.logger.info('Fetched the PROMERICA transaction emails')
+        transactions: list[TransactionCreate] = []
+
+        for bank_emails, parser_class in [(bac_emails, BacMessageParser), (promerica_emails, PromericaMessageParser)]:
+            for email in bank_emails:
+                parser = parser_class(email)
                 value, currency = parser.parse_value_and_currency()
                 transaction = TransactionCreate(
                     date=parser.parse_date(),
@@ -86,28 +125,13 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
                     currency=currency,
                     business=parser.parse_business(),
                     business_type=parser.parse_business_type(),
-                    bank=Bank.BAC,
+                    bank=Bank.BAC if parser_class == BacMessageParser else Bank.PROMERICA,
                     body=parser.body,
                     expense_priority=None,
                     expense_type=None
                 )
                 transactions.append(transaction)
 
-            for email in promerica_emails:
-                parser = PromericaMessageParser(email)
-                value, currency = parser.parse_value_and_currency()
-                transaction = TransactionCreate(
-                    date=parser.parse_date(),
-                    value=value,
-                    currency=currency,
-                    business=parser.parse_business(),
-                    business_type=parser.parse_business_type(),
-                    bank=Bank.PROMERICA,
-                    body=parser.body,
-                    expense_priority=None,
-                    expense_type=None
-                )
-                transactions.append(transaction)
-            self.logger.info(f'Extracted transaction details from emails')
-            self.logger.info(f'Total transactions = {len(transactions)}')
-            return transactions
+        self.logger.info('Extracted transaction details from emails')
+        self.logger.info(f'Total transactions = {len(transactions)}')
+        return transactions

@@ -19,48 +19,26 @@ from .services.transaction_service import TransactionService
 from .utils.logging import configure_root_logger
 
 
-def process_emails(db: Session):
-    logger = logging.getLogger('process_emails')
-    email_client = EmailClient(
+def check_emails():
+    logger = logging.getLogger('check_emails')
+    db: Session = next(get_db())
+    with EmailClient(
         email_user=config.EMAIL_USER,
         email_pass=config.EMAIL_PASSWORD,
         server=config.EMAIL_SERVER,
         mailbox=config.EMAIL_MAILBOX
-    )
-    transaction_service = TransactionService(db)
-    today = datetime.now()
-    transactions = transaction_service.get_transactions_from_email_by_date(
-        email_client,
-        DateRange(
-            today - timedelta(minutes=config.REFRESH_INTERVAL_IN_MINUTES),
-            today
+    ) as client:
+        transaction_service = TransactionService(db)
+        today = datetime.now()
+        logger.info(f'Starting job to fetch new transaction emails')
+        transaction_service.refresh_database_with_emails_from_date(
+            client,
+            DateRange(
+                today - timedelta(minutes=config.REFRESH_INTERVAL_IN_MINUTES),
+                today
+            )
         )
-    )
-
-    for obj in transactions:
-        try:
-            logger.info(f'Processing {obj.business}')
-            transaction_service.create(obj)
-        except TransactionIDExistsError as e:
-            logger.info(
-                f'Transaction ID already exists for {obj.business}, skipping.')
-            # logger.exception(e)
-            continue
-        except IntegrityError as e:
-            logger.error(f'Integrity error while processing {obj.business}')
-            # logger.exception(e)
-            continue
-        except Exception as e:
-            logger.error(f'Unexpected error while processing {obj.business}')
-            # logger.exception(e)
-            continue
-    logger.info("Emails processed successfully.")
-
-
-def check_emails():
-    logger = logging.getLogger('check_emails')
-    db: Session = next(get_db())
-    process_emails(db)
+    logger.info(f'Finished scheduled job: check_emails')
     db.close()
 
 
@@ -78,13 +56,15 @@ async def lifespan(app: FastAPI):
 
     logger = logging.getLogger('lifespan')
     scheduler = BackgroundScheduler()
+    logger.info(
+        f'JOB: check_emails set to run every {config.REFRESH_INTERVAL_IN_MINUTES} minutes')
     scheduler.add_job(check_emails, 'interval',
                       minutes=config.REFRESH_INTERVAL_IN_MINUTES)
     scheduler.start()
-    logger.info("Scheduler started.")
+    logger.info("Scheduler started")
     yield
     scheduler.shutdown()
-    logger.info("Scheduler shutdown.")
+    logger.info("Scheduler shutdown")
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(transactions.router)
