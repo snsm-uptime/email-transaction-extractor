@@ -1,8 +1,8 @@
-import time
-from typing import Type, TypeVar, Generic, List, Optional, Tuple
-from sqlalchemy.orm import Session
+from typing import Generic, List, Optional, Tuple, Type
+
 from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from email_transaction_extractor.typing import ModelType
 from email_transaction_extractor.utils.decorators import timed_operation
 
@@ -18,7 +18,7 @@ class GenericRepository(Generic[ModelType]):
         try:
             self.db.commit()
             self.db.refresh(obj_in)
-            return obj_in, time.time()
+            return obj_in
         except IntegrityError as e:
             self.db.rollback()
             raise e
@@ -40,11 +40,11 @@ class GenericRepository(Generic[ModelType]):
             try:
                 self.db.commit()
                 self.db.refresh(db_obj)
-                return db_obj, time.time()
+                return db_obj
             except IntegrityError as e:
                 self.db.rollback()
                 raise e
-        return None, time.time()
+        return None
 
     @timed_operation
     def delete(self, id: str) -> Tuple[Optional[ModelType], float]:
@@ -53,11 +53,11 @@ class GenericRepository(Generic[ModelType]):
             self.db.delete(db_obj)
             try:
                 self.db.commit()
-                return db_obj, time.time()
+                return db_obj
             except IntegrityError as e:
                 self.db.rollback()
                 raise e
-        return None, time.time()
+        return None
 
     @timed_operation
     def get_paginated(self, offset: int, limit: int) -> Tuple[List[ModelType], float]:

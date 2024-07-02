@@ -1,4 +1,5 @@
-from typing import List
+from http import HTTPStatus
+from typing import List, Tuple, override
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -10,12 +11,15 @@ from email_transaction_extractor.exceptions import TransactionIDExistsError
 from email_transaction_extractor.models.enums import Bank
 from email_transaction_extractor.models.transaction import (
     TransactionTable, generate_transaction_id)
+from email_transaction_extractor.repositories.transaction_repository import TransactionRepository
+from email_transaction_extractor.schemas.api_response import ApiResponse, Meta, SingleResponse
 from email_transaction_extractor.schemas.transaction import (Transaction,
                                                              TransactionCreate,
                                                              TransactionUpdate)
 from email_transaction_extractor.services.email_service import EmailService
 from email_transaction_extractor.services.generic_service import GenericService
 from email_transaction_extractor.utils.dates import DateRange
+from email_transaction_extractor.utils.decorators import timed_operation
 from email_transaction_extractor.utils.parsers.bac_parser import \
     BacMessageParser
 from email_transaction_extractor.utils.parsers.promerica_parser import \
@@ -24,10 +28,12 @@ from email_transaction_extractor.utils.parsers.promerica_parser import \
 
 class TransactionService(GenericService[TransactionTable, TransactionCreate, TransactionUpdate, Transaction]):
     def __init__(self, db: Session):
-        super().__init__(db, TransactionTable,
-                         TransactionCreate, TransactionUpdate, Transaction)
+        self.repository: TransactionRepository = TransactionRepository(db)
+        super().__init__(TransactionTable,
+                         TransactionCreate, TransactionUpdate, Transaction, self.repository)
 
-    def create(self, obj_in: TransactionCreate) -> Transaction:
+    @override
+    def create(self, obj_in: TransactionCreate) -> ApiResponse[Transaction]:
         transaction_id = generate_transaction_id(
             obj_in.bank, obj_in.value, obj_in.date)
         obj_in_data = obj_in.model_dump()
@@ -35,53 +41,51 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
         obj_in_data['bank'] = obj_in.bank.name
         db_obj = self.repository.model(**obj_in_data)
         try:
-            db_obj = self.repository.create(db_obj)
-            self.logger.info('Created obj with id' + db_obj.id)
+            db_obj, elapsed_time = self.repository.create(db_obj)
             # TODO: Add bank and bank_email to the transaction model to avoid type missmatch error
         except IntegrityError:
             raise TransactionIDExistsError(transaction_id)
-        return self.return_schema.model_validate(db_obj)
 
-    # def get_all(self) -> List[Transaction]:
-    #     db_objs = self.repository.get_all()
-    #     # Create a list of transactions without the 'body' field
-    #     transactions_without_body = [
-    #         Transaction(
-    #             id=obj.id,
-    #             date=obj.date,
-    #             value=obj.value,
-    #             currency=obj.currency,
-    #             business=obj.business,
-    #             business_type=obj.business_type,
-    #             bank=obj.bank,
-    #             expense_priority=obj.expense_priority,
-    #             expense_type=obj.expense_type
-    #         )
-    #         for obj in db_objs
-    #     ]
-    #     self.logger.info(
-    #         f'TOTAL TRANSACTIONS: {len(transactions_without_body)}')
-    #     return transactions_without_body
+        transaction = self.return_schema.model_validate(db_obj)
 
-    def refresh_database_with_emails_from_date(self, client: EmailClient, date_range: DateRange):
-        transactions = self.get_transactions_from_email_by_date(
+        return ApiResponse(
+            meta=Meta(status=HTTPStatus.CREATED, request_time=elapsed_time,
+                      message=f'Transaction created successfully'),
+            data=SingleResponse(item=transaction)
+        )
+
+    def get_by_date(self, date_range: DateRange) -> ApiResponse[List[Transaction]]:
+        # TODO: Paginated results by date
+        data, time = self.repository.get_by_date(date_range)
+        return ApiResponse(
+            meta=Meta(status=HTTPStatus.OK,
+                      message=f"Found", request_time=time),
+            data=data)
+
+    def fetch_emails_from_date(self, client: EmailClient, date_range: DateRange) -> ApiResponse[SingleResponse]:
+        meta, time = self.__refresh_database_with_emails_from_date(
+            client, date_range)
+        meta.request_time = time
+        return ApiResponse(meta=meta)
+
+    @timed_operation
+    def __refresh_database_with_emails_from_date(self, client: EmailClient, date_range: DateRange) -> Tuple[Meta, float]:
+        transactions = self.__fetch_from_email_by_date(
             client, date_range)
         new_count = 0
         for obj in transactions:
             try:
                 self.logger.info(
                     f'Processing transaction\tday={obj.date.isoformat()}\tbusiness={obj.business}')
-                new_count += 1
                 self.create(obj)
+                new_count += 1
             except TransactionIDExistsError as e:
                 self.logger.info(
                     f'Transaction ID {e.transaction_id} already exists for {obj.business}, skipping.')
-                self.logger.exception(e)
                 continue
             except IntegrityError as e:
                 self.logger.error(
                     f'Integrity error while processing {obj.business}')
-                self.logger.exception(e)
                 continue
             except Exception as e:
                 self.logger.error(
@@ -91,7 +95,12 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
         self.logger.info(
             f"{len(transactions)} Emails processed successfully. Created {new_count} new entries in the DB")
 
-    def get_transactions_from_email_by_date(self, client: EmailClient, date_range: DateRange) -> List[TransactionCreate]:
+        meta = Meta(
+            status=HTTPStatus.OK,
+            message=f"{len(transactions)} Emails processed successfully. Created {new_count} new entries in the DB")
+        return meta
+
+    def __fetch_from_email_by_date(self, client: EmailClient, date_range: DateRange) -> List[TransactionCreate]:
         """
         Fetches transaction emails from specified banks within a given date range, parses the emails to extract transaction details,
         and returns a list of TransactionCreate objects.

@@ -7,7 +7,7 @@ T = TypeVar('T')
 D = TypeVar('D', bound=BaseModel)
 
 
-class RefreshTransactionsRequest(BaseModel):
+class DateRangeRequest(BaseModel):
     start_date: datetime | None
     end_date: datetime | None
 
@@ -22,9 +22,9 @@ class PaginationMeta(BaseModel):
 
 
 class Meta(BaseModel):
-    status: str
+    status: int
     message: Optional[str] = None
-    request_time: float
+    request_time: float = 0.0
 
 
 class PaginatedResponse(BaseModel, Generic[T]):

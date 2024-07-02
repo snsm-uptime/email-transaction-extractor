@@ -15,6 +15,6 @@ def timed_operation(func: Callable[..., T]) -> Callable[..., T]:
         result = func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logger.info(f"{func.__name__} took {elapsed_time:.4f} seconds")
+        logger.debug(f"{func.__name__} took {elapsed_time:.4f} seconds")
         return result, elapsed_time
     return wrapper

@@ -1,35 +1,14 @@
-from sqlalchemy.orm import Session
+from requests import Session
+from email_transaction_extractor.repositories.generic_repository import GenericRepository
 from email_transaction_extractor.models.transaction import TransactionTable
+from email_transaction_extractor.utils.dates import DateRange
+from email_transaction_extractor.utils.decorators import timed_operation
 
 
-class TransactionRepository:
+class TransactionRepository(GenericRepository[TransactionTable]):
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db, TransactionTable)
 
-    def create(self, transaction: TransactionTable):
-        self.db.add(transaction)
-        self.db.commit()
-        self.db.refresh(transaction)
-        return transaction
-
-    def get(self, transaction_id: int):
-        return self.db.query(TransactionTable).filter(TransactionTable.id == transaction_id).first()
-
-    def get_all(self):
-        return self.db.query(TransactionTable).all()
-
-    def update(self, transaction_id: int, transaction_data: dict):
-        transaction = self.get(transaction_id)
-        if transaction:
-            for key, value in transaction_data.items():
-                setattr(transaction, key, value)
-            self.db.commit()
-            self.db.refresh(transaction)
-        return transaction
-
-    def delete(self, transaction_id: int):
-        transaction = self.get(transaction_id)
-        if transaction:
-            self.db.delete(transaction)
-            self.db.commit()
-        return transaction
+    @timed_operation
+    def get_by_date(self, range: DateRange):
+        return self.db.query(TransactionTable).filter(TransactionTable.date >= range.start_date, TransactionTable.date <= range.end_date).all()

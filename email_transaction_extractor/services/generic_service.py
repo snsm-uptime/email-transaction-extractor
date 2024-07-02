@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from logging import getLogger
 from typing import Generic, Optional, Type
 
 from sqlalchemy.orm import Session
@@ -15,11 +16,13 @@ from email_transaction_extractor.utils.pagination import (decode_cursor,
 
 
 class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, ReturnSchemaType]):
-    def __init__(self, db: Session, model: Type[ModelType], create_schema: Type[CreateSchemaType], update_schema: Type[UpdateSchemaType], return_schema: Type[ReturnSchemaType]):
-        self.repository = GenericRepository[ModelType](db, model)
+    def __init__(self, model: Type[ModelType], create_schema: Type[CreateSchemaType], update_schema: Type[UpdateSchemaType], return_schema: Type[ReturnSchemaType], repository: GenericRepository):
+        self.model = model
         self.create_schema = create_schema
         self.update_schema = update_schema
         self.return_schema = return_schema
+        self.repository = repository
+        self.logger = getLogger(self.__class__.__name__)
 
     def create(self, obj_in: CreateSchemaType) -> ApiResponse[ReturnSchemaType]:
         obj_in_data = obj_in.model_dump()

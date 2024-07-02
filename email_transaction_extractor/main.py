@@ -31,7 +31,7 @@ def check_emails():
         transaction_service = TransactionService(db)
         today = datetime.now()
         logger.info(f'Starting job to fetch new transaction emails')
-        transaction_service.refresh_database_with_emails_from_date(
+        transaction_service.__refresh_database_with_emails_from_date(
             client,
             DateRange(
                 today - timedelta(minutes=config.REFRESH_INTERVAL_IN_MINUTES),

@@ -1,12 +1,13 @@
 from datetime import date, datetime
+from http import HTTPStatus
 import logging
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from email_transaction_extractor import config
 from email_transaction_extractor.database import get_db
 from email_transaction_extractor.email.client import EmailClient
-from email_transaction_extractor.schemas.api_response import ApiResponse, PaginatedResponse, RefreshTransactionsRequest
+from email_transaction_extractor.schemas.api_response import ApiResponse, PaginatedResponse, DateRangeRequest, SingleResponse
 from email_transaction_extractor.schemas.transaction import Transaction, TransactionCreate
 from email_transaction_extractor.services.transaction_service import TransactionService
 from email_transaction_extractor.utils.dates import DateRange
@@ -16,8 +17,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/transactions/refresh")
-def refresh_transactions_by_date(request: RefreshTransactionsRequest, db: Session = Depends(get_db)):
+@router.post("/transactions/", response_model=ApiResponse)
+def refresh_transactions_by_date(range: DateRangeRequest, db: Session = Depends(get_db)):
     """
     Create transactions based on the start date provided in the request.
 
@@ -34,14 +35,14 @@ def refresh_transactions_by_date(request: RefreshTransactionsRequest, db: Sessio
     service = TransactionService(db)
     today = datetime.now()
 
-    if request.start_date > today:
+    if range.start_date > today:
         raise HTTPException(
-            status_code=400, detail="Start date cannot be in the future")
+            status_code=HTTPStatus.BAD_REQUEST, detail="Start date cannot be in the future")
 
-    if request.end_date > today:
-        request.end_date = today
+    if range.end_date > today:
+        range.end_date = today
 
-    date_range = DateRange(request.start_date, request.end_date)
+    date_range = DateRange(range.start_date, range.end_date)
 
     with EmailClient(
         email_user=config.EMAIL_USER,
@@ -51,41 +52,48 @@ def refresh_transactions_by_date(request: RefreshTransactionsRequest, db: Sessio
     ) as email_client:
         logger.info(
             f"Starting transaction creation process for date range: {date_range}")
-        service.refresh_database_with_emails_from_date(
+        response = service.fetch_emails_from_date(
             email_client,
             date_range
         )
+        return response
 
 
-@router.post("/transactions/", response_model=Transaction)
-def create_transaction(transaction: TransactionCreate, db: Session = Depends(get_db)):
+@router.post("/transactions/", response_model=ApiResponse[SingleResponse[Transaction]])
+def create(transaction: TransactionCreate, db: Session = Depends(get_db)):
     service = TransactionService(db)
     return service.create(transaction)
 
 
-@router.get("/transactions/{transaction_id}", response_model=Transaction)
-def read_transaction(transaction_id: str, db: Session = Depends(get_db)):
+@router.get("/transactions/{transaction_id}", response_model=ApiResponse[SingleResponse[Transaction]])
+def get_by_id(transaction_id: str, db: Session = Depends(get_db)):
     service = TransactionService(db)
-    transaction = service.get(transaction_id)
-    if transaction is None:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return transaction
+    resp = service.get(transaction_id)
+    resp.meta.message = "Transaction retrieved successfully"
+    return resp
+
+
+@router.get("/transactions/", response_model=ApiResponse[List[Transaction]])
+def get_by_date(range: DateRangeRequest, db: Session = Depends(get_db)):
+    service = TransactionService(db)
+    return service.get_by_date(range)
 
 
 @router.get("/transactions/", response_model=ApiResponse[PaginatedResponse[Transaction]])
-def read_all_transactions(cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
+def get_all(cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
     service = TransactionService(db)
-    transactions_page = service.get_all(cursor=cursor, page_size=page_size)
-    return transactions_page.model_dump()
+    resp = service.get_all(cursor=cursor, page_size=page_size)
+    resp.meta.message = "Transactions retrieved successfully"
+    return resp.model_dump()
 
 
 @router.put("/transactions/{transaction_id}", response_model=Transaction)
-def update_transaction(transaction_id: int, transaction_data: TransactionCreate, db: Session = Depends(get_db)):
+def update(transaction_id: int, transaction_data: TransactionCreate, db: Session = Depends(get_db)):
     service = TransactionService(db)
     return service.update_transaction(transaction_id, transaction_data.dict())
 
 
 @router.delete("/transactions/{transaction_id}", response_model=Transaction)
-def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
+def delete(transaction_id: int, db: Session = Depends(get_db)):
     service = TransactionService(db)
     return service.delete_transaction(transaction_id)
