@@ -28,13 +28,11 @@ class Meta(BaseModel):
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    meta: Meta
     pagination: Optional[PaginationMeta] = None
     items: Optional[List[T]] = None
 
 
 class SingleResponse(BaseModel, Generic[T]):
-    meta: Meta
     item: Optional[T] = None
 
 

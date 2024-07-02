@@ -27,14 +27,14 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
             self.model(**obj_in_data))
         meta = Meta(status=HTTPStatus.CREATED, request_time=elapsed_time)
         item = self.return_schema.model_validate(db_obj)
-        return ApiResponse(meta=meta, data=SingleResponse(meta=meta, item=item))
+        return ApiResponse(meta=meta, data=SingleResponse(item=item))
 
     def get(self, id: str) -> ApiResponse[ReturnSchemaType]:
         db_obj, elapsed_time = self.repository.get(id)
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
         meta = Meta(status=status, request_time=elapsed_time)
         item = self.return_schema.model_validate(db_obj) if db_obj else None
-        return ApiResponse(meta=meta, data=SingleResponse(meta=meta, item=item))
+        return ApiResponse(meta=meta, data=SingleResponse(item=item))
 
     def get_all(self, page_size: int, cursor: Optional[str] = None) -> ApiResponse[ReturnSchemaType]:
         if cursor:
@@ -71,7 +71,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         )
 
         response = ApiResponse(meta=meta, data=PaginatedResponse(
-            meta=meta, pagination=pagination, items=items))
+            pagination=pagination, items=items))
         return response
 
     def update(self, id: str, obj_in: UpdateSchemaType) -> ApiResponse[ReturnSchemaType]:
@@ -80,11 +80,11 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
         meta = Meta(status=status, request_time=elapsed_time)
         item = self.return_schema.model_validate(db_obj) if db_obj else None
-        return ApiResponse(meta=meta, data=SingleResponse(meta=meta, item=item))
+        return ApiResponse(data=SingleResponse(meta=meta, item=item))
 
     def delete(self, id: str) -> ApiResponse[ReturnSchemaType]:
         db_obj, elapsed_time = self.repository.delete(id)
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
         meta = Meta(status=status, request_time=elapsed_time)
         item = self.return_schema.model_validate(db_obj) if db_obj else None
-        return ApiResponse(meta=meta, data=SingleResponse(meta=meta, item=item))
+        return ApiResponse(data=SingleResponse(meta=meta, item=item))
