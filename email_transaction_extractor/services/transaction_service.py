@@ -59,7 +59,7 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
         data, time = self.repository.get_by_date(date_range)
         return ApiResponse(
             meta=Meta(status=HTTPStatus.OK,
-                      message=f"Found", request_time=time),
+                      message=f"Transactions from {date_range.start_date.date()} to {date_range.end_date.date()} retrieved successfully", request_time=time),
             data=data)
 
     def fetch_emails_from_date(self, client: EmailClient, date_range: DateRange) -> ApiResponse[SingleResponse]:
