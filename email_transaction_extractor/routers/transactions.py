@@ -1,13 +1,13 @@
-from datetime import date, datetime
+from datetime import datetime
 from http import HTTPStatus
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from email_transaction_extractor import config
 from email_transaction_extractor.database import get_db
 from email_transaction_extractor.email.client import EmailClient
-from email_transaction_extractor.schemas.api_response import ApiResponse, Meta, PaginatedResponse, DateRangeRequest, SingleResponse
+from email_transaction_extractor.schemas.api_response import ApiResponse, Meta, PaginatedResponse, SingleResponse
 from email_transaction_extractor.schemas.transaction import Transaction, TransactionCreate
 from email_transaction_extractor.services.transaction_service import TransactionService
 from email_transaction_extractor.utils.dates import DateRange
@@ -20,15 +20,13 @@ logger = logging.getLogger(__name__)
 @router.get("/", response_model=ApiResponse[PaginatedResponse[Transaction]])
 def get_all(cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
     service = TransactionService(db)
-    resp = service.get_all(cursor=cursor, page_size=page_size)
-    resp.meta.message = "Transactions retrieved successfully"
-    return resp.model_dump()
+    return service.get_paginated(cursor=cursor, page_size=page_size)
 
 
 @router.get("/by-date", response_model=ApiResponse[List[Transaction]])
-def get_by_date(range: DateRangeRequest, db: Session = Depends(get_db)):
+def get_by_date(date_range: DateRange, cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
     service = TransactionService(db)
-    return service.get_by_date(range)
+    return service.get_by_date(cursor=cursor, page_size=page_size, date_range=DateRange(**date_range.model_dump()))
 
 
 @router.get("/{transaction_id}", response_model=ApiResponse[SingleResponse[Transaction]])
@@ -51,14 +49,14 @@ def delete(transaction_id: int, db: Session = Depends(get_db)):
     return service.delete_transaction(transaction_id)
 
 
-@router.post("/create", response_model=ApiResponse[SingleResponse[Transaction]])
+@router.post("/", response_model=ApiResponse[SingleResponse[Transaction]])
 def create(transaction: TransactionCreate, db: Session = Depends(get_db)):
     service = TransactionService(db)
     return service.create(transaction)
 
 
 @router.post("/refresh", response_model=ApiResponse)
-def refresh_transactions_by_date(range: DateRangeRequest, db: Session = Depends(get_db)):
+def refresh_transactions_by_date(range: DateRange, db: Session = Depends(get_db)):
     """
     Create transactions based on the start date provided in the request.
 

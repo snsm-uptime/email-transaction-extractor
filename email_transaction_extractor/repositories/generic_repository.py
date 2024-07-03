@@ -1,4 +1,4 @@
-from typing import Generic, List, Optional, Tuple, Type
+from typing import Callable, Generic, List, Optional, Tuple, Type
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -60,9 +60,15 @@ class GenericRepository(Generic[ModelType]):
         return None
 
     @timed_operation
-    def get_paginated(self, offset: int, limit: int) -> Tuple[List[ModelType], float]:
-        return self.db.query(self.model).offset(offset).limit(limit).all()
+    def get_paginated(self, offset: int, limit: int, filter: Optional[Callable[[ModelType], bool]] = None) -> Tuple[List[ModelType], float]:
+        query = self.db.query(self.model)
+        if filter is not None:
+            query.filter(filter)
+        return query.offset(offset).limit(limit).all()
 
     @timed_operation
-    def count(self) -> Tuple[int, float]:
-        return self.db.query(self.model).count()
+    def count(self, filter: Optional[Callable[[ModelType], bool]] = None) -> Tuple[int, float]:
+        query = self.db.query(self.model)
+        if filter is not None:
+            query.filter(filter)
+        return query.count()

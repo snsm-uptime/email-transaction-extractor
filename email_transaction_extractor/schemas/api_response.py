@@ -7,11 +7,6 @@ T = TypeVar('T')
 D = TypeVar('D', bound=BaseModel)
 
 
-class DateRangeRequest(BaseModel):
-    start_date: datetime | None
-    end_date: datetime | None
-
-
 class PaginationMeta(BaseModel):
     total_items: Optional[int] = None
     total_pages: Optional[int] = None

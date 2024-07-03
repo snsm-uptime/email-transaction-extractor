@@ -1,6 +1,7 @@
 from http import HTTPStatus
-from typing import List, Tuple, override
+from typing import List, Optional, Tuple, override
 
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -11,8 +12,10 @@ from email_transaction_extractor.exceptions import TransactionIDExistsError
 from email_transaction_extractor.models.enums import Bank
 from email_transaction_extractor.models.transaction import (
     TransactionTable, generate_transaction_id)
-from email_transaction_extractor.repositories.transaction_repository import TransactionRepository
-from email_transaction_extractor.schemas.api_response import ApiResponse, Meta, SingleResponse
+from email_transaction_extractor.repositories.transaction_repository import \
+    TransactionRepository
+from email_transaction_extractor.schemas.api_response import (
+    ApiResponse, Meta, PaginatedResponse, SingleResponse)
 from email_transaction_extractor.schemas.transaction import (Transaction,
                                                              TransactionCreate,
                                                              TransactionUpdate)
@@ -33,7 +36,7 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
                          TransactionCreate, TransactionUpdate, Transaction, self.repository)
 
     @override
-    def create(self, obj_in: TransactionCreate) -> ApiResponse[Transaction]:
+    def create(self, obj_in: TransactionCreate) -> ApiResponse[SingleResponse[Transaction]]:
         transaction_id = generate_transaction_id(
             obj_in.bank, obj_in.value, obj_in.date)
         obj_in_data = obj_in.model_dump()
@@ -54,13 +57,14 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
             data=SingleResponse(item=transaction)
         )
 
-    def get_by_date(self, date_range: DateRange) -> ApiResponse[List[Transaction]]:
-        # TODO: Paginated results by date
-        data, time = self.repository.get_by_date(date_range)
-        return ApiResponse(
-            meta=Meta(status=HTTPStatus.OK,
-                      message=f"Transactions from {date_range.start_date.date()} to {date_range.end_date.date()} retrieved successfully", request_time=time),
-            data=data)
+    def get_by_date(self, page_size: int, date_range: DateRange, cursor: Optional[str] = None) -> ApiResponse[PaginatedResponse[Transaction]]:
+
+        filter = and_(TransactionTable.date >= date_range.start_date,
+                      TransactionTable.date <= date_range.end_date)
+        response = self.get_paginated(page_size, cursor, filter=filter)
+        response.meta.message = \
+            f'Transactions from {str(date_range)} retrieved successfuly'
+        return response
 
     def fetch_emails_from_date(self, client: EmailClient, date_range: DateRange) -> ApiResponse[SingleResponse]:
         meta, time = self.__refresh_database_with_emails_from_date(

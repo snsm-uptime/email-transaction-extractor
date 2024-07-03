@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from logging import getLogger
-from typing import Generic, Optional, Type
+from typing import Callable, Generic, List, Optional, Type
 
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         self.repository = repository
         self.logger = getLogger(self.__class__.__name__)
 
-    def create(self, obj_in: CreateSchemaType) -> ApiResponse[ReturnSchemaType]:
+    def create(self, obj_in: CreateSchemaType) -> ApiResponse[SingleResponse[ReturnSchemaType]]:
         obj_in_data = obj_in.model_dump()
         db_obj, elapsed_time = self.repository.create(
             self.model(**obj_in_data))
@@ -32,14 +32,18 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         item = self.return_schema.model_validate(db_obj)
         return ApiResponse(meta=meta, data=SingleResponse(item=item))
 
-    def get(self, id: str) -> ApiResponse[ReturnSchemaType]:
+    def get(self, id: str) -> ApiResponse[SingleResponse[ReturnSchemaType]]:
         db_obj, elapsed_time = self.repository.get(id)
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
         meta = Meta(status=status, request_time=elapsed_time)
         item = self.return_schema.model_validate(db_obj) if db_obj else None
         return ApiResponse(meta=meta, data=SingleResponse(item=item))
 
-    def get_all(self, page_size: int, cursor: Optional[str] = None) -> ApiResponse[ReturnSchemaType]:
+    def get_all(self, ) -> ApiResponse[SingleResponse[List[ReturnSchemaType]]]:
+        data, elapsed_time = self.repository.get_all()
+        return ApiResponse(meta=Meta(status=HTTPStatus.OK, request_time=elapsed_time), data=data)
+
+    def get_paginated(self, page_size: int, cursor: Optional[str] = None, filter: Optional[Callable[[ModelType], bool]] = None) -> ApiResponse[PaginatedResponse[ReturnSchemaType]]:
         if cursor:
             cursor_data = decode_cursor(cursor)
             if cursor_data is None:
@@ -48,10 +52,10 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         else:
             current_page = 1
 
-        total_items, count_elapsed_time = self.repository.count()
+        total_items, count_elapsed_time = self.repository.count(filter)
         offset = (current_page - 1) * page_size
         db_objs, paginated_elapsed_time = self.repository.get_paginated(
-            offset, page_size)
+            offset, page_size, filter)
 
         total_pages = (total_items + page_size - 1) // page_size
         request_time = count_elapsed_time + paginated_elapsed_time
@@ -63,7 +67,8 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
 
         items = [self.return_schema.model_validate(obj) for obj in db_objs]
 
-        meta = Meta(status=HTTPStatus.OK, request_time=request_time)
+        meta = Meta(status=HTTPStatus.OK, request_time=request_time,
+                    message="Transactions retrieved successfully")
         pagination = PaginationMeta(
             total_items=total_items,
             total_pages=total_pages,
@@ -77,7 +82,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
             pagination=pagination, items=items))
         return response
 
-    def update(self, id: str, obj_in: UpdateSchemaType) -> ApiResponse[ReturnSchemaType]:
+    def update(self, id: str, obj_in: UpdateSchemaType) -> ApiResponse[SingleResponse[ReturnSchemaType]]:
         obj_in_data = obj_in.model_dump()
         db_obj, elapsed_time = self.repository.update(id, obj_in_data)
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
@@ -85,7 +90,7 @@ class GenericService(Generic[ModelType, CreateSchemaType, UpdateSchemaType, Retu
         item = self.return_schema.model_validate(db_obj) if db_obj else None
         return ApiResponse(data=SingleResponse(meta=meta, item=item))
 
-    def delete(self, id: str) -> ApiResponse[ReturnSchemaType]:
+    def delete(self, id: str) -> ApiResponse[SingleResponse[ReturnSchemaType]]:
         db_obj, elapsed_time = self.repository.delete(id)
         status = HTTPStatus.OK if db_obj else HTTPStatus.NOT_FOUND
         meta = Meta(status=status, request_time=elapsed_time)
