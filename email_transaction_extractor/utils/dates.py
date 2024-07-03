@@ -14,9 +14,10 @@ class DateRange(BaseModel):
 
     @model_validator(mode='before')
     def set_dates(cls, values):
-        if (days_ago := values.get('days_ago')) is not None:
+        days_ago = values.get('days_ago', None)
+        if days_ago is not None:
             end_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
-            start_date = (datetime.now() - timedelta(days=days_ago)
+            start_date = (datetime.now() - timedelta(days=int(days_ago))
                           ).replace(hour=0, minute=0, second=0, microsecond=0)
             values['start_date'] = start_date
             values['end_date'] = end_date

@@ -82,7 +82,8 @@ def refresh_transactions_by_date(range: DateRange, db: Session = Depends(get_db)
     if range.end_date > today:
         range.end_date = today
 
-    date_range = DateRange(range.start_date, range.end_date)
+    date_range = DateRange(start_date=range.start_date,
+                           end_date=range.end_date, days_ago=range.days_ago)
 
     with EmailClient(
         email_user=config.EMAIL_USER,

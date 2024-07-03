@@ -38,10 +38,9 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
     @override
     def create(self, obj_in: TransactionCreate) -> ApiResponse[SingleResponse[Transaction]]:
         transaction_id = generate_transaction_id(
-            obj_in.bank, obj_in.value, obj_in.date)
+            obj_in.bank_email, obj_in.value, obj_in.date)
         obj_in_data = obj_in.model_dump()
         obj_in_data['id'] = transaction_id
-        obj_in_data['bank'] = obj_in.bank.name
         db_obj = self.repository.model(**obj_in_data)
         try:
             db_obj, elapsed_time = self.repository.create(db_obj)
@@ -132,13 +131,15 @@ class TransactionService(GenericService[TransactionTable, TransactionCreate, Tra
             for email in bank_emails:
                 parser = parser_class(email)
                 value, currency = parser.parse_value_and_currency()
+                bank = Bank.BAC if parser_class == BacMessageParser else Bank.PROMERICA
                 transaction = TransactionCreate(
                     date=parser.parse_date(),
                     value=value,
                     currency=currency,
                     business=parser.parse_business(),
                     business_type=parser.parse_business_type(),
-                    bank=Bank.BAC if parser_class == BacMessageParser else Bank.PROMERICA,
+                    bank_email=bank.email,
+                    bank_name=bank.name,
                     body=parser.body,
                     expense_priority=None,
                     expense_type=None
