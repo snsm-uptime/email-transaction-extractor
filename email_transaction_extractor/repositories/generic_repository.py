@@ -63,12 +63,12 @@ class GenericRepository(Generic[ModelType]):
     def get_paginated(self, offset: int, limit: int, filter: Optional[Callable[[ModelType], bool]] = None) -> Tuple[List[ModelType], float]:
         query = self.db.query(self.model)
         if filter is not None:
-            query.filter(filter)
+            query = query.filter(filter)
         return query.offset(offset).limit(limit).all()
 
     @timed_operation
     def count(self, filter: Optional[Callable[[ModelType], bool]] = None) -> Tuple[int, float]:
         query = self.db.query(self.model)
         if filter is not None:
-            query.filter(filter)
+            query = query.filter(filter)
         return query.count()

@@ -23,7 +23,7 @@ def get_all(cursor: Optional[str] = Query(None), page_size: int = Query(10), db:
     return service.get_paginated(cursor=cursor, page_size=page_size)
 
 
-@router.get("/by-date", response_model=ApiResponse[List[Transaction]])
+@router.get("/by-date", response_model=ApiResponse[PaginatedResponse[Transaction]])
 def get_by_date(date_range: DateRange, cursor: Optional[str] = Query(None), page_size: int = Query(10), db: Session = Depends(get_db)):
     service = TransactionService(db)
     return service.get_by_date(cursor=cursor, page_size=page_size, date_range=DateRange(**date_range.model_dump()))
