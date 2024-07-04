@@ -1,15 +1,16 @@
+from mangum import Mangum
 from datetime import datetime, timedelta
-from .exceptions import TransactionIDExistsError
+
+from email_transaction_extractor.models.enums import ImapServer
 import logging
 from contextlib import asynccontextmanager
 import os
-from sqlalchemy.exc import IntegrityError
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
-from email_transaction_extractor import config
+from email_transaction_extractor.config import config
 from email_transaction_extractor.utils.dates import DateRange
 
 from .database import Base, engine, get_db
@@ -25,7 +26,7 @@ def check_emails():
     with EmailClient(
         email_user=config.EMAIL_USER,
         email_pass=config.EMAIL_PASSWORD,
-        server=config.EMAIL_SERVER,
+        server=ImapServer.GOOGLE.value,
         mailbox=config.EMAIL_MAILBOX
     ) as client:
         transaction_service = TransactionService(db)
@@ -66,7 +67,10 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
     logger.info("Scheduler shutdown")
 
+
 app = FastAPI(lifespan=lifespan)
 app.include_router(transactions.router)
+if config.ENVIRONMENT == "prod":
+    app = Mangum(app)
 
 # TODO: Include "Pago de tarjeta" emails from Promerica

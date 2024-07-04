@@ -7,8 +7,10 @@ poetry install
 ```
 ### Environment Variables
 ```sh
-OPENAI_API_KEY=
-EMAIL_PASSWORD=
+EMAIL_USER="<your-email>"
+EMAIL_PASSWORD="***"
+LOG_FILE="server.log"
+DATABASE_URL="postgresql://<username>:<password>@<host>:5432/<database>"
 ```
 
 ## Folder Structure

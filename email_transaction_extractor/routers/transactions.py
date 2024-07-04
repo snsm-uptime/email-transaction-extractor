@@ -4,9 +4,10 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from email_transaction_extractor import config
+from email_transaction_extractor.config import config
 from email_transaction_extractor.database import get_db
 from email_transaction_extractor.email.client import EmailClient
+from email_transaction_extractor.models.enums import ImapServer
 from email_transaction_extractor.schemas.api_response import ApiResponse, Meta, PaginatedResponse, SingleResponse
 from email_transaction_extractor.schemas.transaction import Transaction, TransactionCreate
 from email_transaction_extractor.services.transaction_service import TransactionService
@@ -88,7 +89,7 @@ def refresh_transactions_by_date(range: DateRange, db: Session = Depends(get_db)
     with EmailClient(
         email_user=config.EMAIL_USER,
         email_pass=config.EMAIL_PASSWORD,
-        server=config.EMAIL_SERVER,
+        server=ImapServer.GOOGLE.value,
         mailbox=config.EMAIL_MAILBOX
     ) as email_client:
         logger.info(
