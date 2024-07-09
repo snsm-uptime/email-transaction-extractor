@@ -18,5 +18,5 @@ COPY . /email_transaction_extractor
 
 EXPOSE 80
 
-CMD ["poetry", "run", "uvicorn", "email_transaction_extractor.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["poetry", "run", "uvicorn", "email_transaction_extractor.main:app", "--host", "0.0.0.0", "--port", "5000"]
 
