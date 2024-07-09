@@ -1,6 +1,4 @@
-# email_transaction_extractor/typing.py
-from typing import TypeVar, Generic, Type
-from sqlalchemy.orm import Session
+from typing import TypeVar
 from pydantic import BaseModel
 
 ModelType = TypeVar("ModelType")
