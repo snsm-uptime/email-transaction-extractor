@@ -1,10 +1,10 @@
 import hashlib
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Text
+from sqlalchemy import Column, DateTime, Enum, Float, String, Text
 
 from ..database import Base
-from ..models.enums import Bank, ExpensePriority, ExpenseType
+from ..models.enums import ExpensePriority, ExpenseType
 
 
 def generate_transaction_id(bank: str, value: float, date: datetime) -> str:
@@ -24,7 +24,8 @@ class TransactionTable(Base):
     currency = Column(String, nullable=False)
     business = Column(String, nullable=False)
     business_type = Column(String, nullable=True)
-    bank = Column(Enum(Bank), nullable=False)
+    bank_name = Column(String, nullable=False)
+    bank_email = Column(String, nullable=False)
     expense_priority = Column(Enum(ExpensePriority), nullable=True)
     expense_type = Column(Enum(ExpenseType), nullable=True)
     body = Column(Text, nullable=False)

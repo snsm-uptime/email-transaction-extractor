@@ -1,3 +1,4 @@
+import os
 from email_transaction_extractor.database import Base
 from logging.config import fileConfig
 
@@ -19,10 +20,9 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Load database URL from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
+config.set_main_option('sqlalchemy.url', DATABASE_URL)
 
 
 def run_migrations_offline() -> None:

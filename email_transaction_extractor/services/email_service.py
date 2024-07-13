@@ -21,7 +21,7 @@ class EmailService:
         self.__default_criteria = criteria
 
     def get_mail_from_bank(self, bank: Bank, subject_filter: Optional[str] = None) -> List[Message]:
-        criteria = copy.deepcopy(self.__default_criteria).from_(bank.value)
+        criteria = copy.deepcopy(self.__default_criteria).from_(bank.email)
         if subject_filter:
             criteria = criteria.subject(subject_filter)
         final_criteria = IMAPSearchCriteria().and_(criteria.build())

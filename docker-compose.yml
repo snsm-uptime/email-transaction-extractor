@@ -1,0 +1,10 @@
+version: '3.12'
+
+services:
+  app:
+    image: uptime-app
+    build: .
+    ports:
+      - "80:80"
+    env_file:
+      - .env

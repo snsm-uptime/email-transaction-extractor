@@ -1,11 +1,22 @@
-from dotenv import load_dotenv
-from .models.enums import ImapServer
-from os import getenv
+from typing import Literal
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
 
-EMAIL_PASSWORD = getenv('EMAIL_PASSWORD')
-EMAIL_USER = getenv('EMAIL_USER')
-EMAIL_SERVER = ImapServer.GOOGLE.value
-EMAIL_MAILBOX = "inbox"
-REFRESH_INTERVAL_IN_MINUTES = 60
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_ignore_empty=True,
+        env_file_encoding='utf-8',
+        extra="ignore"
+    )
+    DATABASE_URL: str
+    EMAIL_MAILBOX: str = "inbox"
+    EMAIL_PASSWORD: str
+    EMAIL_USER: str
+    ENVIRONMENT: Literal['local', 'dev', 'prod'] = 'local'
+    LOG_FILE: str = "server.log"
+    REFRESH_INTERVAL_IN_MINUTES: int = 60
+
+
+config = Settings()

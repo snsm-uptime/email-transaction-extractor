@@ -5,7 +5,8 @@ from email_transaction_extractor.models.enums import Bank, ExpensePriority, Expe
 
 
 class TransactionBase(BaseModel):
-    bank: Bank
+    bank_name: str
+    bank_email: str
     business: str
     currency: str
     date: datetime
