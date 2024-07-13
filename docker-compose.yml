@@ -1,10 +1,11 @@
-version: '3.12'
+version: '1'
 
 services:
   app:
-    image: uptime-app
-    build: .
+    container_name: server
+    image: appsuptime:email-transaction-extractor
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "80:80"
-    env_file:
-      - .env
