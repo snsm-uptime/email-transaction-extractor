@@ -1,10 +1,9 @@
 ARG PYTHON_VERSION=3.12
 
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-
 
 WORKDIR /email_transaction_extractor
 
@@ -15,6 +14,7 @@ RUN pip install poetry
 RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 COPY . /email_transaction_extractor
+COPY .env /email_transaction_extractor/.env
 
 EXPOSE 80
 
